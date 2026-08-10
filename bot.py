@@ -87,7 +87,6 @@ async def on_ready():
     except Exception as error:
         print(f"Failed to sync commands: {error}")
 
-
 # ============================================================
 # WELCOME SETUP
 # ADMINISTRATOR ONLY
