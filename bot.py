@@ -51,7 +51,7 @@ async def welcome_setup(interaction: discord.Interaction, channel: discord.TextC
     save_config(welcome_config)
 
     await interaction.response.send_message(
-        f"✅ Welcome system saved!\n"
+        f"â Welcome system saved!\n"
         f"**Channel:** {channel.mention}\n"
         f"**Message:** {message}",
         ephemeral=True
@@ -80,81 +80,81 @@ async def on_member_join(member: discord.Member):
 async def role_command(interaction: discord.Interaction, user: discord.Member, role: discord.Role):
     if role.managed:
         return await interaction.response.send_message(
-            "❌ I cannot give a managed/integration role.", ephemeral=True
+            "â I cannot give a managed/integration role.", ephemeral=True
         )
 
     if role >= interaction.guild.me.top_role:
         return await interaction.response.send_message(
-            "❌ My bot role must be above that role.", ephemeral=True
+            "â My bot role must be above that role.", ephemeral=True
         )
 
     if role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
         return await interaction.response.send_message(
-            "❌ You cannot give a role equal to or higher than your highest role.",
+            "â You cannot give a role equal to or higher than your highest role.",
             ephemeral=True
         )
 
     try:
         await user.add_roles(role, reason=f"Role command by {interaction.user}")
-        await interaction.response.send_message(f"✅ Gave {role.mention} to {user.mention}.")
+        await interaction.response.send_message(f"â Gave {role.mention} to {user.mention}.")
     except discord.Forbidden:
-        await interaction.response.send_message("❌ I don't have permission to give that role.", ephemeral=True)
+        await interaction.response.send_message("â I don't have permission to give that role.", ephemeral=True)
 
 @bot.tree.command(name="kick", description="Kick a user from the server.")
 @app_commands.describe(user="The user to kick.", reason="Reason for the kick.")
 @app_commands.checks.has_permissions(kick_members=True)
 async def kick_command(interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):
     if user == interaction.user:
-        return await interaction.response.send_message("❌ You cannot kick yourself.", ephemeral=True)
+        return await interaction.response.send_message("â You cannot kick yourself.", ephemeral=True)
 
     if user.top_role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
         return await interaction.response.send_message(
-            "❌ You cannot kick someone with an equal or higher role.",
+            "â You cannot kick someone with an equal or higher role.",
             ephemeral=True
         )
 
     if user.top_role >= interaction.guild.me.top_role:
         return await interaction.response.send_message(
-            "❌ My bot role must be above that user.", ephemeral=True
+            "â My bot role must be above that user.", ephemeral=True
         )
 
     try:
         await user.kick(reason=reason)
-        await interaction.response.send_message(f"👢 **{user}** was kicked.\n**Reason:** {reason}")
+        await interaction.response.send_message(f"ð¢ **{user}** was kicked.\n**Reason:** {reason}")
     except discord.Forbidden:
-        await interaction.response.send_message("❌ I don't have permission to kick this user.", ephemeral=True)
+        await interaction.response.send_message("â I don't have permission to kick this user.", ephemeral=True)
 
 @bot.tree.command(name="ban", description="Ban a user from the server.")
 @app_commands.describe(user="The user to ban.", reason="Reason for the ban.")
 @app_commands.checks.has_permissions(ban_members=True)
 async def ban_command(interaction: discord.Interaction, user: discord.Member, reason: str = "No reason provided"):
     if user == interaction.user:
-        return await interaction.response.send_message("❌ You cannot ban yourself.", ephemeral=True)
+        return await interaction.response.send_message("â You cannot ban yourself.", ephemeral=True)
 
     if user.top_role >= interaction.user.top_role and interaction.user != interaction.guild.owner:
         return await interaction.response.send_message(
-            "❌ You cannot ban someone with an equal or higher role.",
+            "â You cannot ban someone with an equal or higher role.",
             ephemeral=True
         )
 
     if user.top_role >= interaction.guild.me.top_role:
         return await interaction.response.send_message(
-            "❌ My bot role must be above that user.", ephemeral=True
+            "â My bot role must be above that user.", ephemeral=True
         )
 
     try:
         await user.ban(reason=reason)
-        await interaction.response.send_message(f"🔨 **{user}** was banned.\n**Reason:** {reason}")
+        await interaction.response.send_message(f"ð¨ **{user}** was banned.\n**Reason:** {reason}")
     except discord.Forbidden:
-        await interaction.response.send_message("❌ I don't have permission to ban this user.", ephemeral=True)
+        await interaction.response.send_message("â I don't have permission to ban this user.", ephemeral=True)
 
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     if isinstance(error, app_commands.MissingPermissions):
-        message = "❌ You don't have permission to use this command."
+        message = "â You don't have permission to use this command."
     else:
         print(f"Command error: {error}")
-        message = "❌ Something went wrong."
+        message = "â Something went wrong."
 
     if interaction.response.is_done():
         await interaction.followup.send(message, ephemeral=True)
@@ -166,3 +166,5 @@ if not token:
     raise RuntimeError("DISCORD_TOKEN environment variable is not set.")
 
 bot.run(token)
+
+
