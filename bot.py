@@ -1,23 +1,18 @@
-  import os
+import os
 import json
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-CONFIG_FILE = "welcome_config.json"
+TOKEN = os.getenv("TOKEN")
 
 intents = discord.Intents.default()
 intents.members = True
 
-bot = commands.Bot(
-    command_prefix="!",
-    intents=intents
-)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
+CONFIG_FILE = "welcome_config.json"
 
-# =========================
-# CONFIG
-# =========================
 
 def load_config():
     if not os.path.exists(CONFIG_FILE):
@@ -38,30 +33,14 @@ def save_config(config):
 welcome_config = load_config()
 
 
-# =========================
-# BOT READY
-# =========================
-
 @bot.event
 async def on_ready():
-
-    await bot.change_presence(
-        status=discord.Status.online,
-        activity=discord.Game(name=".gg/emerald")
-    )
-
-    print(f"Logged in as {bot.user}")
-    print("Status: .gg/emerald")
-
     try:
         synced = await bot.tree.sync()
+        print(f"Logged in as {bot.user}")
         print(f"Synced {len(synced)} commands.")
-
-        for command in synced:
-            print(f"/{command.name}")
-
     except Exception as e:
-        print(f"Sync error: {e}")
+        print(f"Command sync error: {e}")
 
 
 # =========================
@@ -73,8 +52,8 @@ async def on_ready():
     description="Set up the server welcome system."
 )
 @app_commands.describe(
-    channel="The channel for welcome messages.",
-    message="Welcome message. Use {user} to mention the member."
+    channel="The channel where welcome messages will be sent.",
+    message="The welcome message. Use {user} to mention the new member."
 )
 @app_commands.checks.has_permissions(manage_guild=True)
 async def welcomesetup(
@@ -82,7 +61,6 @@ async def welcomesetup(
     channel: discord.TextChannel,
     message: str
 ):
-
     guild_id = str(interaction.guild.id)
 
     welcome_config[guild_id] = {
@@ -92,37 +70,38 @@ async def welcomesetup(
 
     save_config(welcome_config)
 
+    preview = message.replace(
+        "{user}",
+        interaction.user.mention
+    )
+
     await interaction.response.send_message(
         f"✅ Welcome system set up!\n\n"
         f"**Channel:** {channel.mention}\n"
-        f"**Message:** {message}\n\n"
-        f"Use `{{user}}` to mention the person who joins.",
+        f"**Message:** {preview}",
         ephemeral=True
     )
 
 
 # =========================
-# MEMBER JOIN
+# WELCOME MESSAGE
 # =========================
 
 @bot.event
 async def on_member_join(member):
-
     guild_id = str(member.guild.id)
 
-    settings = welcome_config.get(guild_id)
+    config = welcome_config.get(guild_id)
 
-    if not settings:
+    if not config:
         return
 
-    channel = member.guild.get_channel(
-        settings["channel_id"]
-    )
+    channel = member.guild.get_channel(config["channel_id"])
 
-    if channel is None:
+    if not channel:
         return
 
-    message = settings["message"].replace(
+    message = config["message"].replace(
         "{user}",
         member.mention
     )
@@ -130,7 +109,10 @@ async def on_member_join(member):
     try:
         await channel.send(message)
     except discord.Forbidden:
-        print("Cannot send welcome message.")
+        print(
+            f"Cannot send welcome message in {channel.name} "
+            f"for {member.guild.name}"
+        )
 
 
 # =========================
@@ -139,29 +121,21 @@ async def on_member_join(member):
 
 @bot.tree.command(
     name="role",
-    description="Give a role to a user."
+    description="Give a user a role."
 )
 @app_commands.describe(
     user="The user to give the role to.",
     role="The role to give."
 )
 @app_commands.checks.has_permissions(manage_roles=True)
-async def role_command(
+async def role(
     interaction: discord.Interaction,
     user: discord.Member,
     role: discord.Role
 ):
-
-    if role.managed:
-        await interaction.response.send_message(
-            "❌ I cannot give a managed role.",
-            ephemeral=True
-        )
-        return
-
     if role >= interaction.guild.me.top_role:
         await interaction.response.send_message(
-            "❌ My bot role must be above that role.",
+            "❌ I cannot give that role because it is higher than or equal to my highest role.",
             ephemeral=True
         )
         return
@@ -175,7 +149,7 @@ async def role_command(
 
     except discord.Forbidden:
         await interaction.response.send_message(
-            "❌ I cannot give that role.",
+            "❌ I don't have permission to give that role.",
             ephemeral=True
         )
 
@@ -186,29 +160,28 @@ async def role_command(
 
 @bot.tree.command(
     name="kick",
-    description="Kick a user."
+    description="Kick a member from the server."
 )
 @app_commands.describe(
-    user="The user to kick.",
+    user="The member to kick.",
     reason="Reason for the kick."
 )
 @app_commands.checks.has_permissions(kick_members=True)
-async def kick_command(
+async def kick(
     interaction: discord.Interaction,
     user: discord.Member,
     reason: str = "No reason provided"
 ):
-
-    if user == interaction.user:
+    if user.top_role >= interaction.user.top_role:
         await interaction.response.send_message(
-            "❌ You cannot kick yourself.",
+            "❌ You cannot kick this member.",
             ephemeral=True
         )
         return
 
     if user.top_role >= interaction.guild.me.top_role:
         await interaction.response.send_message(
-            "❌ My bot role must be above that user.",
+            "❌ I cannot kick this member because their role is too high.",
             ephemeral=True
         )
         return
@@ -217,13 +190,13 @@ async def kick_command(
         await user.kick(reason=reason)
 
         await interaction.response.send_message(
-            f"👢 **{user}** was kicked.\n"
+            f"👢 **{user}** has been kicked.\n"
             f"**Reason:** {reason}"
         )
 
     except discord.Forbidden:
         await interaction.response.send_message(
-            "❌ I cannot kick that user.",
+            "❌ I don't have permission to kick this member.",
             ephemeral=True
         )
 
@@ -234,29 +207,28 @@ async def kick_command(
 
 @bot.tree.command(
     name="ban",
-    description="Ban a user."
+    description="Ban a member from the server."
 )
 @app_commands.describe(
-    user="The user to ban.",
+    user="The member to ban.",
     reason="Reason for the ban."
 )
 @app_commands.checks.has_permissions(ban_members=True)
-async def ban_command(
+async def ban(
     interaction: discord.Interaction,
     user: discord.Member,
     reason: str = "No reason provided"
 ):
-
-    if user == interaction.user:
+    if user.top_role >= interaction.user.top_role:
         await interaction.response.send_message(
-            "❌ You cannot ban yourself.",
+            "❌ You cannot ban this member.",
             ephemeral=True
         )
         return
 
     if user.top_role >= interaction.guild.me.top_role:
         await interaction.response.send_message(
-            "❌ My bot role must be above that user.",
+            "❌ I cannot ban this member because their role is too high.",
             ephemeral=True
         )
         return
@@ -265,32 +237,31 @@ async def ban_command(
         await user.ban(reason=reason)
 
         await interaction.response.send_message(
-            f"🔨 **{user}** was banned.\n"
+            f"🔨 **{user}** has been banned.\n"
             f"**Reason:** {reason}"
         )
 
     except discord.Forbidden:
         await interaction.response.send_message(
-            "❌ I cannot ban that user.",
+            "❌ I don't have permission to ban this member.",
             ephemeral=True
         )
 
 
 # =========================
-# ERRORS
+# ERROR HANDLER
 # =========================
 
 @bot.tree.error
-async def on_command_error(
+async def on_app_command_error(
     interaction: discord.Interaction,
     error: app_commands.AppCommandError
 ):
-
     if isinstance(error, app_commands.MissingPermissions):
         message = "❌ You don't have permission to use this command."
     else:
         print(f"Command error: {error}")
-        message = "❌ Something went wrong."
+        message = "❌ Something went wrong while running the command."
 
     if interaction.response.is_done():
         await interaction.followup.send(
@@ -305,14 +276,12 @@ async def on_command_error(
 
 
 # =========================
-# START
+# START BOT
 # =========================
-
-TOKEN = os.getenv("DISCORD_TOKEN")
 
 if not TOKEN:
     raise RuntimeError(
-        "DISCORD_TOKEN environment variable is missing."
+        "TOKEN environment variable is missing!"
     )
 
 bot.run(TOKEN)
