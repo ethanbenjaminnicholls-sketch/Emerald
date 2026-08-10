@@ -62,7 +62,10 @@ welcome_config = load_config()
 
 @bot.event
 async def on_ready():
-
+    await bot.change_presence(
+        status=discord.Status.online,
+        activity=discord.Game(name=".gg/emerald")
+    )
     print("================================")
     print(f"Logged in as: {bot.user}")
     print(f"Bot ID: {bot.user.id}")
