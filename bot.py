@@ -35,7 +35,7 @@ async def on_ready():
     except Exception as e:
         print(f"Slash command sync failed: {e}")
 
-@bot.tree.command(name="welcomeSetup", description="Set up the server welcome system.")
+@bot.tree.command(name="welcomesetup", description="Set up the server welcome system.")
 @app_commands.describe(
     channel="The channel where welcome messages are sent.",
     message="Welcome message. Use {user} to mention the new member."
