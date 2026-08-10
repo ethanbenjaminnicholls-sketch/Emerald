@@ -21,7 +21,7 @@ def load_config():
     try:
         with open(CONFIG_FILE, "r", encoding="utf-8") as file:
             return json.load(file)
-    except:
+    except Exception:
         return {}
 
 
@@ -65,13 +65,12 @@ async def on_ready():
     channel="The channel for welcome messages.",
     message="Welcome message. Use {user} to mention the member."
 )
-@app_commands.checks.has_permissions(manage_guild=True)
+@app_commands.checks.has_permissions(administrator=True)
 async def welcomesetup(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
     message: str
 ):
-
     guild_id = str(interaction.guild.id)
 
     welcome_config[guild_id] = {
@@ -100,7 +99,6 @@ async def welcomesetup(
 
 @bot.event
 async def on_member_join(member):
-
     guild_id = str(member.guild.id)
 
     config = welcome_config.get(guild_id)
@@ -138,13 +136,12 @@ async def on_member_join(member):
     user="The user to give the role to.",
     role="The role to give."
 )
-@app_commands.checks.has_permissions(manage_roles=True)
+@app_commands.checks.has_permissions(administrator=True)
 async def role(
     interaction: discord.Interaction,
     user: discord.Member,
     role: discord.Role
 ):
-
     if role >= interaction.guild.me.top_role:
         await interaction.response.send_message(
             "❌ I cannot give that role because it is above my highest role.",
@@ -178,13 +175,12 @@ async def role(
     user="The member to kick.",
     reason="Reason for the kick."
 )
-@app_commands.checks.has_permissions(kick_members=True)
+@app_commands.checks.has_permissions(administrator=True)
 async def kick(
     interaction: discord.Interaction,
     user: discord.Member,
     reason: str = "No reason provided"
 ):
-
     try:
         await user.kick(reason=reason)
 
@@ -212,13 +208,12 @@ async def kick(
     user="The member to ban.",
     reason="Reason for the ban."
 )
-@app_commands.checks.has_permissions(ban_members=True)
+@app_commands.checks.has_permissions(administrator=True)
 async def ban(
     interaction: discord.Interaction,
     user: discord.Member,
     reason: str = "No reason provided"
 ):
-
     try:
         await user.ban(reason=reason)
 
@@ -243,9 +238,8 @@ async def command_error(
     interaction: discord.Interaction,
     error: app_commands.AppCommandError
 ):
-
     if isinstance(error, app_commands.MissingPermissions):
-        message = "❌ You don't have permission to use this command."
+        message = "❌ You need Administrator permission to use this command."
     else:
         print(f"Command error: {error}")
         message = "❌ An error occurred."
