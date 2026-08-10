@@ -69,10 +69,10 @@ async def on_ready():
 
     await bot.change_presence(
         status=discord.Status.online,
-        activity=discord.CustomActivity(name=".gg/emerald")
+        activity=discord.Game(name=".gg/emerald")
     )
 
-    print("Custom status set to .gg/emerald")
+    print("Status set to: .gg/emerald")
 
     try:
         synced = await bot.tree.sync()
