@@ -60,29 +60,13 @@ welcome_config = load_config()
 # BOT READY
 # ============================================================
 
-@bot.event
-async def on_ready():
-    print("================================")
-    print(f"Logged in as: {bot.user}")
-    print(f"Bot ID: {bot.user.id}")
-    print("================================")
-
-    await bot.change_presence(
-        status=discord.Status.online,
-        activity=discord.Game(name=".gg/emerald")
+await bot.change_presence(
+    status=discord.Status.online,
+    activity=discord.Streaming(
+        name=".gg/emerald",
+        url="https://www.twitch.tv/emerald"
     )
-
-    print("Status set to: .gg/emerald")
-
-    try:
-        synced = await bot.tree.sync()
-        print(f"Successfully synced {len(synced)} commands.")
-
-        for command in synced:
-            print(f"Command registered: /{command.name}")
-
-    except Exception as error:
-        print(f"Failed to sync commands: {error}")
+)
 # ============================================================
 # WELCOME SETUP
 # ADMINISTRATOR ONLY
