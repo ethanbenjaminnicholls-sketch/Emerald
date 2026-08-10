@@ -152,11 +152,11 @@ async def on_ready():
     description="Set up the welcome system."
 )
 @app_commands.describe(
-    channel="Channel where welcome messages will be sent.",
-    message="Welcome message. Use {user} to mention the member.",
+    channel="The channel for welcome messages.",
+    message="The welcome message. Use {user} to mention the member.",
     embed="Use an embed? Type yes or no.",
-    color="Embed color: green, red, blue, purple, or #00ff00.",
-    image_url="Optional image URL for the embed."
+    color="Embed color, e.g. green, red, blue, or #00ff00.",
+    image_url="Optional image URL."
 )
 @app_commands.checks.has_permissions(administrator=True)
 async def welcomesetup(
@@ -167,16 +167,6 @@ async def welcomesetup(
     color: str = "green",
     image_url: str = ""
 ):
-
-    # Make sure this is being used inside a server
-    if interaction.guild is None:
-        await interaction.response.send_message(
-            "❌ This command can only be used in a server.",
-            ephemeral=True
-        )
-        return
-
-    guild_id = str(interaction.guild.id)
 
     # ========================================================
     # EMBED OPTION
