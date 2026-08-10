@@ -78,74 +78,122 @@ await bot.change_presence(
 )
 @app_commands.describe(
     channel="The channel where welcome messages will be sent.",
-    message="Welcome message. Use {user} to mention the new member."
+    message="Welcome message. Use {user} to mention the new member.",
+    embed="Use an embed for the welcome message? (yes/no)",
+    color="Embed color, e.g. green, red, blue, purple, or #00ff00.",
+    image_url="Optional image URL to display at the bottom of the embed."
 )
 @app_commands.checks.has_permissions(administrator=True)
 async def welcomesetup(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
-    message: str
+    message: str,
+    embed: str = "no",
+    color: str = "green",
+    image_url: str = ""
 ):
 
     guild_id = str(interaction.guild.id)
 
+    # --------------------------------------------------------
+    # EMBED COLOR
+    # --------------------------------------------------------
+
+    colors = {
+        "red": discord.Color.red(),
+        "green": discord.Color.green(),
+        "blue": discord.Color.blue(),
+        "purple": discord.Color.purple(),
+        "orange": discord.Color.orange(),
+        "yellow": discord.Color.yellow(),
+        "pink": discord.Color.magenta(),
+        "gold": discord.Color.gold(),
+        "teal": discord.Color.teal(),
+        "dark": discord.Color.dark_grey(),
+        "black": discord.Color.from_rgb(0, 0, 0),
+        "white": discord.Color.from_rgb(255, 255, 255)
+    }
+
+    color_name = color.lower().strip()
+
+    # Allow hex colors such as #00ff00
+    if color_name.startswith("#"):
+        try:
+            color_value = int(color_name[1:], 16)
+            embed_color = discord.Color(color_value)
+        except ValueError:
+            embed_color = discord.Color.green()
+    else:
+        embed_color = colors.get(
+            color_name,
+            discord.Color.green()
+        )
+
+    # --------------------------------------------------------
+    # EMBED YES / NO
+    # --------------------------------------------------------
+
+    use_embed = embed.lower().strip() in (
+        "yes",
+        "y",
+        "true",
+        "on"
+    )
+
+    # --------------------------------------------------------
+    # SAVE CONFIG
+    # --------------------------------------------------------
+
     welcome_config[guild_id] = {
         "channel_id": channel.id,
-        "message": message
+        "message": message,
+        "embed": use_embed,
+        "color": color_name,
+        "image_url": image_url.strip()
     }
 
     save_config(welcome_config)
+
+    # --------------------------------------------------------
+    # PREVIEW
+    # --------------------------------------------------------
 
     preview = message.replace(
         "{user}",
         interaction.user.mention
     )
 
-    await interaction.response.send_message(
-        "✅ **Welcome system configured!**\n\n"
-        f"**Channel:** {channel.mention}\n"
-        f"**Message:** {preview}",
-        ephemeral=True
-    )
-
-
-# ============================================================
-# WELCOME MESSAGE
-# ============================================================
-
-@bot.event
-async def on_member_join(member):
-
-    guild_id = str(member.guild.id)
-
-    config = welcome_config.get(guild_id)
-
-    if not config:
-        return
-
-    channel = member.guild.get_channel(
-        config["channel_id"]
-    )
-
-    if channel is None:
-        return
-
-    message = config["message"].replace(
-        "{user}",
-        member.mention
-    )
-
-    try:
-        await channel.send(message)
-
-    except discord.Forbidden:
-        print(
-            f"I don't have permission to send messages "
-            f"in #{channel.name}."
+    if use_embed:
+        preview_embed = discord.Embed(
+            description=preview,
+            color=embed_color
         )
 
-    except Exception as error:
-        print(f"Welcome message error: {error}")
+        if image_url.strip():
+            preview_embed.set_image(
+                url=image_url.strip()
+            )
+
+        preview_embed.set_thumbnail(
+            url=interaction.user.display_avatar.url
+        )
+
+        await interaction.response.send_message(
+            "✅ **Welcome system configured!**\n\n"
+            f"**Channel:** {channel.mention}\n"
+            f"**Embed:** Yes\n"
+            f"**Color:** `{color_name}`\n"
+            f"**Image:** `{image_url or 'None'}`",
+            ephemeral=True
+        )
+
+    else:
+        await interaction.response.send_message(
+            "✅ **Welcome system configured!**\n\n"
+            f"**Channel:** {channel.mention}\n"
+            f"**Embed:** No",
+            ephemeral=True
+        )
 
 
 # ============================================================
