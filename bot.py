@@ -68,13 +68,13 @@ async def on_ready():
     print(f"Bot ID: {bot.user.id}")
     print("================================")
 
-    # .gg/emerald status
+    # Set bot status
     await bot.change_presence(
         status=discord.Status.online,
-        activity=discord.CustomActivity(
-            name=".gg/emerald"
-        )
+        activity=discord.Game(name=".gg/emerald")
     )
+
+    print("Status set to: .gg/emerald")
 
     try:
         synced = await bot.tree.sync()
