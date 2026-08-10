@@ -142,42 +142,26 @@ async def on_ready():
 )
 @app_commands.describe(
     channel="The channel for welcome messages.",
-    message="The welcome message. Use {user} to mention the member.",
-    embed="Use an embed? Type yes or no.",
-    color="Embed color, e.g. green, red, blue, or #00ff00.",
-    image_url="Optional image URL."
+    message="Welcome message. Use {user} to mention the new member.",
+    embed="Use an embed for the welcome message.",
+    color="Embed color: green, red, blue, purple, or #00ff00.",
+    image_url="Optional image URL for the embed."
+)
+@app_commands.choices(
+    embed=[
+        app_commands.Choice(name="Yes", value="yes"),
+        app_commands.Choice(name="No", value="no")
+    ]
 )
 @app_commands.checks.has_permissions(administrator=True)
 async def welcomesetup(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
     message: str,
-    embed: str = "no",
+    embed: app_commands.Choice[str],
     color: str = "green",
     image_url: str = ""
 ):
-
-    # ========================================================
-    # EMBED OPTION
-    # ========================================================
-
-    embed_value = embed.lower().strip()
-
-    use_embed = embed_value in (
-        "yes",
-        "y",
-        "true",
-        "on"
-    )
-
-    # ========================================================
-    # COLOR
-    # ========================================================
-
-    color_name = color.lower().strip()
-
-    embed_color = get_embed_color(
-        color_name
     )
 
     # ========================================================
