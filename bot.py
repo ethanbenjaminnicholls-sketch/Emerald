@@ -72,32 +72,52 @@ await bot.change_presence(
 # ADMINISTRATOR ONLY
 # ============================================================
 
-@bot.tree.command(
-    name="welcomesetup",
-    description="Set up the welcome system."
-)
-@app_commands.describe(
-    channel="The channel where welcome messages will be sent.",
-    message="Welcome message. Use {user} to mention the new member.",
-    embed="Use an embed for the welcome message? (yes/no)",
-    color="Embed color, e.g. green, red, blue, purple, or #00ff00.",
-    image_url="Optional image URL to display at the bottom of the embed."
-)
-@app_commands.checks.has_permissions(administrator=True)
-async def welcomesetup(
-    interaction: discord.Interaction,
-    channel: discord.TextChannel,
-    message: str,
-    embed: str = "no",
-    color: str = "green",
-    image_url: str = ""
-):
+# ============================================================
+# WELCOME MESSAGE
+# ============================================================
 
-    guild_id = str(interaction.guild.id)
+@bot.event
+async def on_member_join(member):
 
-    # --------------------------------------------------------
-    # EMBED COLOR
-    # --------------------------------------------------------
+    guild_id = str(member.guild.id)
+
+    config = welcome_config.get(guild_id)
+
+    if not config:
+        return
+
+    channel = member.guild.get_channel(
+        config["channel_id"]
+    )
+
+    if channel is None:
+        return
+
+    message = config["message"].replace(
+        "{user}",
+        member.mention
+    )
+
+    # ========================================================
+    # NORMAL MESSAGE
+    # ========================================================
+
+    if not config.get("embed", False):
+
+        try:
+            await channel.send(message)
+
+        except discord.Forbidden:
+            print(
+                f"I don't have permission to send messages "
+                f"in #{channel.name}."
+            )
+
+        return
+
+    # ========================================================
+    # EMBED MESSAGE
+    # ========================================================
 
     colors = {
         "red": discord.Color.red(),
@@ -114,89 +134,65 @@ async def welcomesetup(
         "white": discord.Color.from_rgb(255, 255, 255)
     }
 
-    color_name = color.lower().strip()
+    color_name = config.get("color", "green").lower()
 
-    # Allow hex colors such as #00ff00
+    # Support custom hex colors
     if color_name.startswith("#"):
+
         try:
             color_value = int(color_name[1:], 16)
             embed_color = discord.Color(color_value)
+
         except ValueError:
             embed_color = discord.Color.green()
+
     else:
+
         embed_color = colors.get(
             color_name,
             discord.Color.green()
         )
 
-    # --------------------------------------------------------
-    # EMBED YES / NO
-    # --------------------------------------------------------
+    # ========================================================
+    # CREATE EMBED
+    # ========================================================
 
-    use_embed = embed.lower().strip() in (
-        "yes",
-        "y",
-        "true",
-        "on"
+    welcome_embed = discord.Embed(
+        description=message,
+        color=embed_color
     )
 
-    # --------------------------------------------------------
-    # SAVE CONFIG
-    # --------------------------------------------------------
-
-    welcome_config[guild_id] = {
-        "channel_id": channel.id,
-        "message": message,
-        "embed": use_embed,
-        "color": color_name,
-        "image_url": image_url.strip()
-    }
-
-    save_config(welcome_config)
-
-    # --------------------------------------------------------
-    # PREVIEW
-    # --------------------------------------------------------
-
-    preview = message.replace(
-        "{user}",
-        interaction.user.mention
+    # User's profile picture in the embed
+    welcome_embed.set_thumbnail(
+        url=member.display_avatar.url
     )
 
-    if use_embed:
-        preview_embed = discord.Embed(
-            description=preview,
-            color=embed_color
+    # Optional image
+    image_url = config.get("image_url", "").strip()
+
+    if image_url:
+        welcome_embed.set_image(
+            url=image_url
         )
 
-        if image_url.strip():
-            preview_embed.set_image(
-                url=image_url.strip()
-            )
+    try:
 
-        preview_embed.set_thumbnail(
-            url=interaction.user.display_avatar.url
+        await channel.send(
+            embed=welcome_embed
         )
 
-        await interaction.response.send_message(
-            "✅ **Welcome system configured!**\n\n"
-            f"**Channel:** {channel.mention}\n"
-            f"**Embed:** Yes\n"
-            f"**Color:** `{color_name}`\n"
-            f"**Image:** `{image_url or 'None'}`",
-            ephemeral=True
+    except discord.Forbidden:
+
+        print(
+            f"I don't have permission to send messages "
+            f"in #{channel.name}."
         )
 
-    else:
-        await interaction.response.send_message(
-            "✅ **Welcome system configured!**\n\n"
-            f"**Channel:** {channel.mention}\n"
-            f"**Embed:** No",
-            ephemeral=True
-        )
+    except Exception as error:
 
-
-# ============================================================
+        print(
+            f"Welcome embed error: {error}"
+        )# ============================================================
 # ROLE
 # ADMINISTRATOR ONLY
 # ============================================================
