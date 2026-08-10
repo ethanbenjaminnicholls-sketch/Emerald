@@ -105,42 +105,31 @@ def get_embed_color(color):
 
 @bot.event
 async def on_ready():
+    print(f"Logged in as {bot.user}")
 
-    print("========================================")
-    print(f"Logged in as: {bot.user}")
-    print(f"Bot ID: {bot.user.id}")
-    print("========================================")
-
-    # Streaming status
-    try:
-        await bot.change_presence(
-            status=discord.Status.online,
-            activity=discord.Streaming(
-                name=".gg/emerald",
-                url="https://www.twitch.tv/emerald"
-            )
+    await bot.change_presence(
+        status=discord.Status.online,
+        activity=discord.Streaming(
+            name=".gg/emerald",
+            url="https://www.twitch.tv/emerald"
         )
+    )
 
-        print("Status set to: Streaming .gg/emerald")
-
-    except Exception as error:
-        print(f"Could not set status: {error}")
-
-    # Global slash command sync
     try:
         synced = await bot.tree.sync()
 
-        print(
-            f"Successfully synced {len(synced)} "
-            "commands globally."
-        )
+        print(f"Synced {len(synced)} commands.")
 
         for command in synced:
-            print(f"Registered: /{command.name}")
+            print(f"Registered /{command.name}")
+
+            if command.name == "welcomesetup":
+                print("WELCOMESETUP OPTIONS:")
+                for option in command.parameters:
+                    print(f"- {option.name}")
 
     except Exception as error:
-        print(f"Failed to sync commands: {error}")
-
+        print(f"Sync error: {error}")
 
 # ============================================================
 # WELCOME SETUP
