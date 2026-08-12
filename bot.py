@@ -1990,16 +1990,12 @@ async def on_message(message):
 
     if counting:
 
-        channel_id = counting.get(
-            "channel_id"
-        )
+        channel_id = counting.get("channel_id")
 
         if message.channel.id == channel_id:
 
             try:
-                number = int(
-                    message.content.strip()
-                )
+                number = int(message.content.strip())
 
             except ValueError:
                 await bot.process_commands(message)
@@ -2012,19 +2008,55 @@ async def on_message(message):
                 )
             )
 
+            last_user_id = counting.get("last_user_id")
+
+            # ====================================================
+            # CORRECT NUMBER
+            # ====================================================
+
             if number == expected:
 
-                try:
-                    await message.add_reaction("✅")
-                except Exception:
-                    pass
+                # The same person cannot count twice in a row
+                if (
+                    last_user_id is not None
+                    and last_user_id == message.author.id
+                ):
 
-                counting["next"] = expected + 1
-                counting["last_user_id"] = (
-                    message.author.id
-                )
+                    streak = max(
+                        0,
+                        expected - 1
+                    )
 
-                save_config()
+                    counting["next"] = 1
+                    counting["last_user_id"] = None
+
+                    save_config()
+
+                    try:
+                        await message.channel.send(
+                            f"❌ {message.author.mention} "
+                            f"cannot count twice in a row!\n"
+                            f"💥 The streak was **{streak}**!\n"
+                            f"🔄 The count has reset to **1**."
+                        )
+                    except Exception:
+                        pass
+
+                else:
+
+                    try:
+                        await message.add_reaction("✅")
+                    except Exception:
+                        pass
+
+                    counting["next"] = expected + 1
+                    counting["last_user_id"] = message.author.id
+
+                    save_config()
+
+            # ====================================================
+            # WRONG NUMBER
+            # ====================================================
 
             else:
 
@@ -2041,7 +2073,8 @@ async def on_message(message):
                 try:
                     await message.channel.send(
                         f"❌ Oh no {message.author.mention} "
-                        f"has ruined the streak at **{streak}**!"
+                        f"has ruined the streak at **{streak}**!\n"
+                        f"🔄 The count has reset to **1**."
                     )
                 except Exception:
                     pass
