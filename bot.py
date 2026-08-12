@@ -2,8 +2,10 @@ import os
 import json
 import random
 import asyncio
-import discord
+import re
+from datetime import timedelta
 
+import discord
 from discord import app_commands
 from discord.ext import commands
 
@@ -33,7 +35,7 @@ bot = commands.Bot(
 
 
 # ============================================================
-# CONFIG FILE
+# CONFIG
 # ============================================================
 
 CONFIG_FILE = "bot_config.json"
@@ -48,20 +50,29 @@ def load_config():
             return json.load(file)
 
     except Exception as error:
-        print(f"Could not load config: {error}")
+        print(f"Config load error: {error}")
         return {}
 
 
-def save_config(config):
+def save_config():
     try:
         with open(CONFIG_FILE, "w", encoding="utf-8") as file:
             json.dump(config, file, indent=4)
 
     except Exception as error:
-        print(f"Could not save config: {error}")
+        print(f"Config save error: {error}")
 
 
 config = load_config()
+
+
+def get_guild_config(guild_id):
+    guild_id = str(guild_id)
+
+    if guild_id not in config:
+        config[guild_id] = {}
+
+    return config[guild_id]
 
 
 # ============================================================
@@ -85,53 +96,63 @@ COLORS = {
 }
 
 
-def get_embed_color(color):
-    color = color.lower().strip()
+def get_color(value):
+    value = value.lower().strip()
 
-    if color.startswith("#"):
+    if value.startswith("#"):
         try:
-            value = int(color[1:], 16)
+            number = int(value[1:], 16)
 
-            if 0 <= value <= 0xFFFFFF:
-                return discord.Color(value)
+            if 0 <= number <= 0xFFFFFF:
+                return discord.Color(number)
 
         except ValueError:
             pass
 
-    return COLORS.get(
-        color,
-        discord.Color.green()
-    )
+    return COLORS.get(value, discord.Color.green())
 
 
 # ============================================================
 # DURATION PARSER
 # ============================================================
 
-def parse_duration(duration):
-    duration = duration.lower().strip()
+def parse_duration(value):
+    """
+    Examples:
+    10s
+    5m
+    2h
+    1d
+    """
 
-    try:
-        if duration.endswith("s"):
-            return int(duration[:-1])
+    match = re.fullmatch(
+        r"(\d+)\s*(s|m|h|d)",
+        value.lower().strip()
+    )
 
-        if duration.endswith("m"):
-            return int(duration[:-1]) * 60
-
-        if duration.endswith("h"):
-            return int(duration[:-1]) * 60 * 60
-
-        if duration.endswith("d"):
-            return int(duration[:-1]) * 60 * 60 * 24
-
-        return int(duration)
-
-    except ValueError:
+    if not match:
         return None
+
+    number = int(match.group(1))
+    unit = match.group(2)
+
+    if unit == "s":
+        return number
+
+    if unit == "m":
+        return number * 60
+
+    if unit == "h":
+        return number * 60 * 60
+
+    if unit == "d":
+        return number * 60 * 60 * 24
+
+    return None
 
 
 # ============================================================
-# BOT READY
+# READY
 # ============================================================
 
 @bot.event
@@ -141,6 +162,21 @@ async def on_ready():
     print(f"Logged in as: {bot.user}")
     print(f"Bot ID: {bot.user.id}")
     print("========================================")
+
+    # --------------------------------------------------------
+    # GLOBAL COMMAND SYNC
+    # --------------------------------------------------------
+
+    try:
+        synced = await bot.tree.sync()
+
+        print(f"SYNCED {len(synced)} GLOBAL COMMANDS:")
+
+        for command in synced:
+            print(f"  /{command.name}")
+
+    except Exception as error:
+        print(f"GLOBAL COMMAND SYNC ERROR: {error}")
 
     # --------------------------------------------------------
     # STREAMING STATUS
@@ -155,50 +191,12 @@ async def on_ready():
             )
         )
 
-        print("Status set to: Streaming .gg/emerald")
+        print("Status: Streaming .gg/emerald")
 
     except Exception as error:
-        print(f"Could not set status: {error}")
-
-
-    # --------------------------------------------------------
-    # COMMANDS LOADED
-    # --------------------------------------------------------
+        print(f"Status error: {error}")
 
     print("========================================")
-    print("COMMANDS LOADED INTO BOT:")
-
-    commands_loaded = bot.tree.get_commands()
-
-    for command in commands_loaded:
-        print(f"  /{command.name}")
-
-    print(f"TOTAL LOADED: {len(commands_loaded)}")
-    print("========================================")
-
-
-    # --------------------------------------------------------
-    # GLOBAL COMMAND SYNC
-    # --------------------------------------------------------
-
-    try:
-
-        synced = await bot.tree.sync()
-
-        print("========================================")
-        print(f"SYNCED {len(synced)} GLOBAL COMMANDS:")
-
-        for command in synced:
-            print(f"  /{command.name}")
-
-        print("========================================")
-
-    except Exception as error:
-
-        print("========================================")
-        print("GLOBAL COMMAND SYNC FAILED")
-        print(error)
-        print("========================================")
 
 
 # ============================================================
@@ -209,23 +207,21 @@ async def on_ready():
     name="help",
     description="Show all available bot commands."
 )
-async def help_command(
-    interaction: discord.Interaction
-):
+async def help_command(interaction: discord.Interaction):
 
     embed = discord.Embed(
-        title="Emerald Bot",
-        description="Here are all the available commands.",
+        title="💚 Emerald Help",
+        description="Here are all of my available commands.",
         color=discord.Color.green()
     )
 
     embed.add_field(
         name="🛠️ Moderation",
         value=(
-            "`/role` — Give a member a role\n"
             "`/kick` — Kick a member\n"
             "`/ban` — Ban a member\n"
-            "`/timeout` — Timeout a member"
+            "`/timeout` — Timeout a member\n"
+            "`/role` — Give a role to a member"
         ),
         inline=False
     )
@@ -233,15 +229,17 @@ async def help_command(
     embed.add_field(
         name="👋 Welcome",
         value=(
-            "`/welcomesetup` — Configure welcome messages"
+            "`/welcomesetup` — Configure welcome messages\n"
+            "Supports normal messages, embeds, colors and images."
         ),
         inline=False
     )
 
     embed.add_field(
-        name="🎉 Giveaway",
+        name="🎉 Giveaways",
         value=(
-            "`/giveaway` — Start a giveaway"
+            "`/giveaway` — Start a giveaway\n"
+            "Members can enter using the button."
         ),
         inline=False
     )
@@ -249,7 +247,7 @@ async def help_command(
     embed.add_field(
         name="✅ Verification",
         value=(
-            "`/verifysetup` — Set up verification"
+            "`/verifysetup` — Set up the verification system."
         ),
         inline=False
     )
@@ -257,13 +255,13 @@ async def help_command(
     embed.add_field(
         name="🔊 Voice",
         value=(
-            "`/jointocreate` — Set up Join to Create"
+            "`/jointocreate` — Create a Join To Create voice system."
         ),
         inline=False
     )
 
     embed.set_footer(
-        text="Emerald Bot"
+        text="Emerald • .gg/emerald"
     )
 
     await interaction.response.send_message(
@@ -280,10 +278,10 @@ async def help_command(
     description="Set up the welcome system."
 )
 @app_commands.describe(
-    channel="The channel for welcome messages.",
+    channel="The channel where welcome messages are sent.",
     message="Welcome message. Use {user} to mention the member.",
     embed="Use an embed? Type yes or no.",
-    color="Embed color, e.g. green, red, blue, or #00ff00.",
+    color="Embed color such as green, red, blue or #00ff00.",
     image_url="Optional image URL."
 )
 @app_commands.checks.has_permissions(administrator=True)
@@ -296,7 +294,9 @@ async def welcomesetup(
     image_url: str = ""
 ):
 
-    server_id = str(interaction.guild.id)
+    guild_config = get_guild_config(
+        interaction.guild.id
+    )
 
     use_embed = embed.lower().strip() in (
         "yes",
@@ -307,57 +307,81 @@ async def welcomesetup(
 
     color_name = color.lower().strip()
 
-    # Make sure guild config exists
-    if server_id not in config:
-        config[server_id] = {}
+    # Validate URL if supplied
+    image_url = image_url.strip()
 
-    config[server_id]["welcome"] = {
+    guild_config["welcome"] = {
         "channel_id": channel.id,
         "message": message,
         "embed": use_embed,
         "color": color_name,
-        "image_url": image_url.strip()
+        "image_url": image_url
     }
 
-    save_config(config)
+    save_config()
 
-    await interaction.response.send_message(
-        "✅ **Welcome system configured!**\n\n"
-        f"**Channel:** {channel.mention}\n"
-        f"**Embed:** {'Yes' if use_embed else 'No'}\n"
-        f"**Color:** `{color_name}`\n"
-        f"**Image:** `{image_url.strip() if image_url.strip() else 'None'}`",
-        ephemeral=True
+    # Preview
+    preview_message = message.replace(
+        "{user}",
+        interaction.user.mention
     )
+
+    if use_embed:
+
+        preview = discord.Embed(
+            description=preview_message,
+            color=get_color(color_name)
+        )
+
+        preview.set_thumbnail(
+            url=interaction.user.display_avatar.url
+        )
+
+        if image_url:
+            preview.set_image(
+                url=image_url
+            )
+
+        await interaction.response.send_message(
+            "✅ **Welcome system configured!**",
+            embed=preview,
+            ephemeral=True
+        )
+
+    else:
+
+        await interaction.response.send_message(
+            "✅ **Welcome system configured!**\n\n"
+            f"**Channel:** {channel.mention}\n"
+            f"**Embed:** No",
+            ephemeral=True
+        )
 
 
 # ============================================================
-# WELCOME MESSAGE
+# WELCOME EVENT
 # ============================================================
 
 @bot.event
 async def on_member_join(member):
 
-    server_id = str(member.guild.id)
+    guild_config = get_guild_config(
+        member.guild.id
+    )
 
-    server_config = config.get(server_id)
+    welcome = guild_config.get("welcome")
 
-    if not server_config:
-        return
-
-    welcome_config = server_config.get("welcome")
-
-    if not welcome_config:
+    if not welcome:
         return
 
     channel = member.guild.get_channel(
-        welcome_config.get("channel_id")
+        welcome.get("channel_id")
     )
 
     if channel is None:
         return
 
-    message = welcome_config.get(
+    message = welcome.get(
         "message",
         "Welcome {user}!"
     )
@@ -371,33 +395,25 @@ async def on_member_join(member):
     # NORMAL MESSAGE
     # --------------------------------------------------------
 
-    if not welcome_config.get("embed", False):
+    if not welcome.get("embed", False):
 
         try:
             await channel.send(message)
 
         except Exception as error:
-            print(f"Welcome message error: {error}")
+            print(f"Welcome error: {error}")
 
         return
-
 
     # --------------------------------------------------------
     # EMBED
     # --------------------------------------------------------
 
-    color_name = welcome_config.get(
-        "color",
-        "green"
-    )
-
-    embed_color = get_embed_color(
-        color_name
-    )
-
     welcome_embed = discord.Embed(
         description=message,
-        color=embed_color
+        color=get_color(
+            welcome.get("color", "green")
+        )
     )
 
     # Member profile picture
@@ -406,7 +422,7 @@ async def on_member_join(member):
     )
 
     # Optional image
-    image_url = welcome_config.get(
+    image_url = welcome.get(
         "image_url",
         ""
     ).strip()
@@ -417,16 +433,12 @@ async def on_member_join(member):
         )
 
     try:
-
         await channel.send(
             embed=welcome_embed
         )
 
     except Exception as error:
-
-        print(
-            f"Welcome embed error: {error}"
-        )
+        print(f"Welcome embed error: {error}")
 
 
 # ============================================================
@@ -435,10 +447,10 @@ async def on_member_join(member):
 
 @bot.tree.command(
     name="role",
-    description="Give a user a role."
+    description="Give a member a role."
 )
 @app_commands.describe(
-    user="The user to give the role to.",
+    user="The member to give the role to.",
     role="The role to give."
 )
 @app_commands.checks.has_permissions(administrator=True)
@@ -469,7 +481,7 @@ async def role(
         await user.add_roles(role)
 
         await interaction.response.send_message(
-            f"✅ {role.mention} has been given to {user.mention}."
+            f"✅ {role.mention} was given to {user.mention}."
         )
 
     except discord.Forbidden:
@@ -511,7 +523,7 @@ async def kick(
     except discord.Forbidden:
 
         await interaction.response.send_message(
-            "❌ I don't have permission to kick this member.",
+            "❌ I cannot kick that member.",
             ephemeral=True
         )
 
@@ -547,7 +559,7 @@ async def ban(
     except discord.Forbidden:
 
         await interaction.response.send_message(
-            "❌ I don't have permission to ban this member.",
+            "❌ I cannot ban that member.",
             ephemeral=True
         )
 
@@ -562,10 +574,10 @@ async def ban(
 )
 @app_commands.describe(
     user="The member to timeout.",
-    duration="Duration such as 10m, 1h, or 1d.",
+    duration="Duration such as 10m, 1h or 1d.",
     reason="Reason for the timeout."
 )
-@app_commands.checks.has_permissions(administrator=True)
+@app_commands.checks.has_permissions(moderate_members=True)
 async def timeout(
     interaction: discord.Interaction,
     user: discord.Member,
@@ -575,9 +587,10 @@ async def timeout(
 
     seconds = parse_duration(duration)
 
-    if seconds is None or seconds <= 0:
+    if seconds is None:
         await interaction.response.send_message(
-            "❌ Invalid duration. Use something like `10m`, `1h`, or `1d`.",
+            "❌ Invalid duration.\n"
+            "Use something like `10m`, `1h`, or `1d`.",
             ephemeral=True
         )
         return
@@ -592,19 +605,20 @@ async def timeout(
     try:
 
         await user.timeout(
-            discord.utils.utcnow() + discord.timedelta(seconds=seconds),
+            timedelta(seconds=seconds),
             reason=reason
         )
 
         await interaction.response.send_message(
-            f"🔇 **{user}** has been timed out for `{duration}`.\n"
+            f"⏱️ **{user}** has been timed out for "
+            f"`{duration}`.\n"
             f"**Reason:** {reason}"
         )
 
     except discord.Forbidden:
 
         await interaction.response.send_message(
-            "❌ I don't have permission to timeout this member.",
+            "❌ I cannot timeout that member.",
             ephemeral=True
         )
 
@@ -619,13 +633,12 @@ class GiveawayView(discord.ui.View):
         super().__init__(timeout=None)
 
         self.entries = set()
-        self.message = None
-        self.ended = False
 
     @discord.ui.button(
         label="Enter Giveaway",
+        emoji="🎉",
         style=discord.ButtonStyle.green,
-        emoji="🎉"
+        custom_id="emerald_giveaway_enter"
     )
     async def enter(
         self,
@@ -633,30 +646,25 @@ class GiveawayView(discord.ui.View):
         button: discord.ui.Button
     ):
 
-        if self.ended:
-            await interaction.response.send_message(
-                "❌ This giveaway has ended.",
-                ephemeral=True
+        if interaction.user.id in self.entries:
+
+            self.entries.remove(
+                interaction.user.id
             )
-            return
-
-        user_id = interaction.user.id
-
-        if user_id in self.entries:
-
-            self.entries.remove(user_id)
 
             await interaction.response.send_message(
-                "❌ You left the giveaway.",
+                "You have left the giveaway.",
                 ephemeral=True
             )
 
         else:
 
-            self.entries.add(user_id)
+            self.entries.add(
+                interaction.user.id
+            )
 
             await interaction.response.send_message(
-                "✅ You entered the giveaway!",
+                "🎉 You entered the giveaway!",
                 ephemeral=True
             )
 
@@ -670,26 +678,17 @@ class GiveawayView(discord.ui.View):
     description="Start a giveaway."
 )
 @app_commands.describe(
-    duration="Duration such as 10m, 1h, or 1d.",
-    prize="The giveaway prize.",
-    winners="Number of winners."
+    duration="Duration such as 10m, 1h or 1d.",
+    winners="Number of winners.",
+    prize="What are you giving away?"
 )
 @app_commands.checks.has_permissions(administrator=True)
 async def giveaway(
     interaction: discord.Interaction,
     duration: str,
-    prize: str,
-    winners: int = 1
+    winners: int,
+    prize: str
 ):
-
-    seconds = parse_duration(duration)
-
-    if seconds is None or seconds <= 0:
-        await interaction.response.send_message(
-            "❌ Invalid duration. Example: `10m`, `1h`, `1d`.",
-            ephemeral=True
-        )
-        return
 
     if winners < 1:
         await interaction.response.send_message(
@@ -698,66 +697,107 @@ async def giveaway(
         )
         return
 
+    seconds = parse_duration(duration)
+
+    if seconds is None:
+        await interaction.response.send_message(
+            "❌ Invalid duration. Use `10m`, `1h`, or `1d`.",
+            ephemeral=True
+        )
+        return
+
+    await interaction.response.defer()
+
+    end_time = discord.utils.utcnow() + timedelta(
+        seconds=seconds
+    )
+
     view = GiveawayView()
 
     embed = discord.Embed(
         title="🎉 GIVEAWAY",
         description=(
-            f"**Prize:** {prize}\n"
+            f"**Prize:** {prize}\n\n"
             f"**Winners:** {winners}\n"
-            f"**Duration:** {duration}\n\n"
-            "Click the button below to enter!"
+            f"**Ends:** <t:{int(end_time.timestamp())}:R>\n\n"
+            "Click **Enter Giveaway** to enter!"
         ),
         color=discord.Color.green()
     )
 
-    await interaction.response.send_message(
-        embed=embed,
-        view=view
+    embed.set_footer(
+        text=f"Hosted by {interaction.user}"
     )
 
-    view.message = await interaction.original_response()
+    message = await interaction.followup.send(
+        embed=embed,
+        view=view,
+        wait=True
+    )
 
     await asyncio.sleep(seconds)
 
-    view.ended = True
+    if not view.entries:
 
-    for item in view.children:
-        item.disabled = True
-
-    if view.entries:
-
-        chosen_ids = random.sample(
-            list(view.entries),
-            min(winners, len(view.entries))
+        ended = discord.Embed(
+            title="🎉 GIVEAWAY ENDED",
+            description=(
+                f"**Prize:** {prize}\n\n"
+                "❌ Nobody entered the giveaway."
+            ),
+            color=discord.Color.red()
         )
 
-        mentions = " ".join(
-            f"<@{user_id}>"
-            for user_id in chosen_ids
+        await message.edit(
+            embed=ended,
+            view=None
         )
 
-        result = (
-            f"🎉 **Giveaway ended!**\n\n"
-            f"**Prize:** {prize}\n"
-            f"**Winner(s):** {mentions}"
+        return
+
+    entry_ids = list(view.entries)
+
+    random.shuffle(entry_ids)
+
+    selected = entry_ids[:min(
+        winners,
+        len(entry_ids)
+    )]
+
+    mentions = []
+
+    for user_id in selected:
+
+        member = interaction.guild.get_member(
+            user_id
         )
 
-    else:
+        if member:
+            mentions.append(
+                member.mention
+            )
 
-        result = (
-            f"🎉 **Giveaway ended!**\n\n"
-            f"**Prize:** {prize}\n"
-            "❌ Nobody entered."
-        )
-
-    await view.message.edit(
-        view=view
+    ended = discord.Embed(
+        title="🎉 GIVEAWAY ENDED",
+        description=(
+            f"**Prize:** {prize}\n\n"
+            f"🏆 **Winner(s):** "
+            f"{', '.join(mentions) if mentions else 'Unknown'}"
+        ),
+        color=discord.Color.green()
     )
 
-    await interaction.channel.send(
-        result
+    await message.edit(
+        embed=ended,
+        view=None
     )
+
+    if mentions:
+
+        await interaction.channel.send(
+            f"🎉 Congratulations {', '.join(mentions)}! "
+            f"You won **{prize}**!"
+        )
 
 
 # ============================================================
@@ -768,12 +808,14 @@ class VerifyView(discord.ui.View):
 
     def __init__(self, role_id):
         super().__init__(timeout=None)
+
         self.role_id = role_id
 
     @discord.ui.button(
         label="Verify",
+        emoji="✅",
         style=discord.ButtonStyle.green,
-        emoji="✅"
+        custom_id="emerald_verify"
     )
     async def verify(
         self,
@@ -787,14 +829,15 @@ class VerifyView(discord.ui.View):
 
         if role is None:
             await interaction.response.send_message(
-                "❌ The verified role no longer exists.",
+                "❌ The verification role no longer exists.",
                 ephemeral=True
             )
             return
 
         if role in interaction.user.roles:
+
             await interaction.response.send_message(
-                "✅ You are already verified.",
+                "✅ You are already verified!",
                 ephemeral=True
             )
             return
@@ -811,7 +854,7 @@ class VerifyView(discord.ui.View):
         except discord.Forbidden:
 
             await interaction.response.send_message(
-                "❌ I cannot give you the verified role.",
+                "❌ I cannot give you the verification role.",
                 ephemeral=True
             )
 
@@ -825,8 +868,8 @@ class VerifyView(discord.ui.View):
     description="Set up the verification system."
 )
 @app_commands.describe(
-    channel="The channel where the verification message goes.",
-    role="The role users receive when verified."
+    channel="Channel where the verification panel will be sent.",
+    role="Role given after verification."
 )
 @app_commands.checks.has_permissions(administrator=True)
 async def verifysetup(
@@ -835,39 +878,27 @@ async def verifysetup(
     role: discord.Role
 ):
 
-    bot_member = interaction.guild.me
+    guild_config = get_guild_config(
+        interaction.guild.id
+    )
 
-    if role >= bot_member.top_role:
-        await interaction.response.send_message(
-            "❌ The verified role must be below my highest role.",
-            ephemeral=True
-        )
-        return
+    guild_config["verify_role_id"] = role.id
 
-    server_id = str(interaction.guild.id)
-
-    if server_id not in config:
-        config[server_id] = {}
-
-    config[server_id]["verify"] = {
-        "role_id": role.id,
-        "channel_id": channel.id
-    }
-
-    save_config(config)
+    save_config()
 
     embed = discord.Embed(
-        title="✅ Verification",
+        title="✅ Server Verification",
         description=(
-            "Click the button below to verify yourself "
-            "and receive access to the server."
+            "Click the button below to verify yourself."
         ),
         color=discord.Color.green()
     )
 
+    view = VerifyView(role.id)
+
     await channel.send(
         embed=embed,
-        view=VerifyView(role.id)
+        view=view
     )
 
     await interaction.response.send_message(
@@ -883,10 +914,10 @@ async def verifysetup(
 
 @bot.tree.command(
     name="jointocreate",
-    description="Set up a Join to Create voice channel."
+    description="Create a Join To Create voice system."
 )
 @app_commands.describe(
-    category="The category where the voice channel should be created."
+    category="Category where the Join To Create channel will be created."
 )
 @app_commands.checks.has_permissions(administrator=True)
 async def jointocreate(
@@ -894,33 +925,30 @@ async def jointocreate(
     category: discord.CategoryChannel
 ):
 
-    server_id = str(interaction.guild.id)
+    guild_config = get_guild_config(
+        interaction.guild.id
+    )
 
-    if server_id not in config:
-        config[server_id] = {}
-
-    # Create the Join to Create channel
+    # Create the main Join To Create channel
     channel = await interaction.guild.create_voice_channel(
         "Join To Create",
         category=category
     )
 
-    config[server_id]["jointocreate"] = {
-        "channel_id": channel.id,
-        "category_id": category.id
-    }
+    guild_config["jtc_channel_id"] = channel.id
 
-    save_config(config)
+    save_config()
 
     await interaction.response.send_message(
-        f"✅ Join to Create has been set up!\n"
-        f"Join **{channel.name}** to create your own voice channel.",
+        f"✅ Join To Create has been created: {channel.mention}\n\n"
+        "When someone joins it, their own voice channel will "
+        "automatically be created.",
         ephemeral=True
     )
 
 
 # ============================================================
-# JOIN TO CREATE HANDLER
+# VOICE STATE
 # ============================================================
 
 @bot.event
@@ -930,66 +958,83 @@ async def on_voice_state_update(
     after
 ):
 
-    if after.channel is None:
-        return
-
-    server_id = str(member.guild.id)
-
-    server_config = config.get(server_id)
-
-    if not server_config:
-        return
-
-    jtc_config = server_config.get(
-        "jointocreate"
+    guild_config = get_guild_config(
+        member.guild.id
     )
 
-    if not jtc_config:
-        return
-
-    jtc_channel_id = jtc_config.get(
-        "channel_id"
+    jtc_id = guild_config.get(
+        "jtc_channel_id"
     )
 
-    if after.channel.id != jtc_channel_id:
+    if not jtc_id:
         return
 
-    category = member.guild.get_channel(
-        jtc_config.get("category_id")
-    )
+    # --------------------------------------------------------
+    # CREATE PERSONAL CHANNEL
+    # --------------------------------------------------------
 
-    if not isinstance(
-        category,
-        discord.CategoryChannel
-    ):
-        return
+    if after.channel and after.channel.id == jtc_id:
 
-    try:
+        category = after.channel.category
 
-        new_channel = await member.guild.create_voice_channel(
-            f"{member.display_name}'s Channel",
-            category=category
+        try:
+
+            new_channel = await member.guild.create_voice_channel(
+                f"{member.display_name}'s Room",
+                category=category
+            )
+
+            await member.move_to(
+                new_channel
+            )
+
+            guild_config.setdefault(
+                "temporary_channels",
+                []
+            )
+
+            guild_config["temporary_channels"].append(
+                new_channel.id
+            )
+
+            save_config()
+
+        except Exception as error:
+            print(
+                f"JTC creation error: {error}"
+            )
+
+    # --------------------------------------------------------
+    # DELETE EMPTY PERSONAL CHANNEL
+    # --------------------------------------------------------
+
+    if before.channel:
+
+        temporary_channels = guild_config.get(
+            "temporary_channels",
+            []
         )
 
-        await member.move_to(
-            new_channel
-        )
+        if before.channel.id in temporary_channels:
 
-        # Wait for the member to leave
-        while True:
+            if len(before.channel.members) == 0:
 
-            await asyncio.sleep(2)
+                try:
 
-            if len(new_channel.members) == 0:
-                break
+                    channel_id = before.channel.id
 
-        await new_channel.delete()
+                    await before.channel.delete()
 
-    except Exception as error:
+                    temporary_channels.remove(
+                        channel_id
+                    )
 
-        print(
-            f"Join To Create error: {error}"
-        )
+                    save_config()
+
+                except Exception as error:
+                    print(
+                        f"JTC deletion error: {error}"
+                    )
 
 
 # ============================================================
@@ -1008,17 +1053,28 @@ async def command_error(
     ):
 
         message = (
-            "❌ **Administrator permission required.**"
+            "❌ You don't have the required permissions "
+            "to use this command."
+        )
+
+    elif isinstance(
+        error,
+        app_commands.CommandOnCooldown
+    ):
+
+        message = (
+            "❌ This command is on cooldown."
         )
 
     else:
 
         print(
-            f"Command error: {error}"
+            f"Slash command error: {error}"
         )
 
         message = (
-            "❌ An unexpected error occurred."
+            "❌ Something went wrong while running "
+            "that command."
         )
 
     try:
@@ -1038,28 +1094,15 @@ async def command_error(
             )
 
     except Exception as error:
-
         print(
-            f"Could not send error message: {error}"
+            f"Could not send error response: {error}"
         )
 
 
 # ============================================================
-# FINAL COMMAND CHECK
+# START
 # ============================================================
 
-print("========================================")
-print("COMMANDS REGISTERED IN bot.py:")
-
-for command in bot.tree.get_commands():
-    print(f"  /{command.name}")
-
-print(f"TOTAL: {len(bot.tree.get_commands())}")
-print("========================================")
-
-
-# ============================================================
-# START BOT
-# ============================================================
+print("Starting Emerald bot...")
 
 bot.run(TOKEN)
