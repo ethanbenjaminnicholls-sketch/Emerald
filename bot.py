@@ -24,6 +24,7 @@ if not TOKEN:
 # ============================================================
 
 intents = discord.Intents.default()
+
 intents.members = True
 intents.message_content = True
 intents.voice_states = True
@@ -47,50 +48,25 @@ CONFIG_FILE = "bot_config.json"
 
 
 def load_config():
-
     if not os.path.exists(CONFIG_FILE):
         return {}
 
     try:
-
-        with open(
-            CONFIG_FILE,
-            "r",
-            encoding="utf-8"
-        ) as file:
-
+        with open(CONFIG_FILE, "r", encoding="utf-8") as file:
             return json.load(file)
 
     except Exception as error:
-
-        print(
-            f"CONFIG LOAD ERROR: {error}"
-        )
-
+        print(f"Config load error: {error}")
         return {}
 
 
 def save_config():
-
     try:
-
-        with open(
-            CONFIG_FILE,
-            "w",
-            encoding="utf-8"
-        ) as file:
-
-            json.dump(
-                config,
-                file,
-                indent=4
-            )
+        with open(CONFIG_FILE, "w", encoding="utf-8") as file:
+            json.dump(config, file, indent=4)
 
     except Exception as error:
-
-        print(
-            f"CONFIG SAVE ERROR: {error}"
-        )
+        print(f"Config save error: {error}")
 
 
 config = load_config()
@@ -102,62 +78,35 @@ config = load_config()
 
 def get_color(value):
 
-    value = str(
-        value
-    ).lower().strip()
+    value = str(value).lower().strip()
 
     colors = {
-
         "red": discord.Color.red(),
-
         "green": discord.Color.green(),
-
         "blue": discord.Color.blue(),
-
         "purple": discord.Color.purple(),
-
         "orange": discord.Color.orange(),
-
         "yellow": discord.Color.yellow(),
-
         "pink": discord.Color.magenta(),
-
         "gold": discord.Color.gold(),
-
         "teal": discord.Color.teal(),
 
-        "black": discord.Color.from_rgb(
-            0,
-            0,
-            0
-        ),
+        # FIXED - no discord.Color.grey()
+        "gray": discord.Color.from_rgb(128, 128, 128),
+        "grey": discord.Color.from_rgb(128, 128, 128),
 
-        "white": discord.Color.from_rgb(
-            255,
-            255,
-            255
-        )
+        "black": discord.Color.from_rgb(0, 0, 0),
+        "white": discord.Color.from_rgb(255, 255, 255)
     }
 
-    # HEX COLOR
-
     if value.startswith("#"):
-
         try:
-
-            number = int(
-                value[1:],
-                16
-            )
+            number = int(value[1:], 16)
 
             if 0 <= number <= 0xFFFFFF:
-
-                return discord.Color(
-                    number
-                )
+                return discord.Color(number)
 
         except ValueError:
-
             pass
 
     return colors.get(
@@ -173,68 +122,35 @@ def get_color(value):
 @bot.event
 async def on_ready():
 
-    print(
-        "========================================"
-    )
-
-    print(
-        f"Logged in as: {bot.user}"
-    )
-
-    print(
-        f"Bot ID: {bot.user.id}"
-    )
-
-    print(
-        "========================================"
-    )
-
-    # STATUS
+    print("========================================")
+    print(f"Logged in as: {bot.user}")
+    print(f"Bot ID: {bot.user.id}")
+    print("========================================")
 
     try:
-
         await bot.change_presence(
-
             status=discord.Status.online,
-
             activity=discord.Streaming(
-
                 name=".gg/emerald",
-
                 url="https://www.twitch.tv/emerald"
-
             )
-
         )
 
     except Exception as error:
-
-        print(
-            f"PRESENCE ERROR: {error}"
-        )
-
-    # GLOBAL COMMAND SYNC
+        print(f"Presence error: {error}")
 
     try:
-
         synced = await bot.tree.sync()
 
         print(
-            f"SUCCESSFULLY SYNCED "
-            f"{len(synced)} COMMANDS"
+            f"Successfully synced {len(synced)} commands."
         )
 
         for command in synced:
-
-            print(
-                f"COMMAND: /{command.name}"
-            )
+            print(f"Registered: /{command.name}")
 
     except Exception as error:
-
-        print(
-            f"COMMAND SYNC ERROR: {error}"
-        )
+        print(f"Command sync error: {error}")
 
 
 # ============================================================
@@ -245,80 +161,57 @@ async def on_ready():
     name="help",
     description="Show all bot commands."
 )
-async def help_command(
-    interaction: discord.Interaction
-):
+async def help_command(interaction: discord.Interaction):
 
     embed = discord.Embed(
-
         title="💚 Emerald Bot",
-
-        description=(
-            "Here are all available commands."
-        ),
-
+        description="Here are all available commands.",
         color=discord.Color.green()
-
     )
 
     embed.add_field(
-
         name="🛡️ Moderation",
-
         value=(
             "`/kick` — Kick a member\n"
             "`/ban` — Ban a member\n"
             "`/timeout` — Timeout a member\n"
-            "`/role` — Give a role"
+            "`/role` — Give a member a role"
         ),
-
         inline=False
     )
 
     embed.add_field(
-
         name="👋 Welcome",
-
         value=(
             "`/welcomesetup` — "
             "Set up welcome messages"
         ),
-
         inline=False
     )
 
     embed.add_field(
-
         name="🎉 Giveaways",
-
         value=(
             "`/giveaway` — Start a giveaway"
         ),
-
         inline=False
     )
 
     embed.add_field(
-
         name="✅ Verification",
-
         value=(
             "`/verifysetup` — "
             "Set up verification"
         ),
-
         inline=False
     )
 
     embed.add_field(
-
         name="🔊 Voice",
-
         value=(
             "`/jointocreate` — "
-            "Create Join to Create"
+            "Set up Join to Create"
         ),
-
         inline=False
     )
 
@@ -340,83 +233,51 @@ async def help_command(
     description="Set up the welcome system."
 )
 @app_commands.describe(
-
     channel="Welcome channel.",
-
-    message=(
-        "Welcome message. "
-        "Use {user} for the member."
-    ),
-
+    message="Welcome message. Use {user} for the member.",
     embed="Use an embed? yes or no.",
-
     color="Embed color.",
-
     image_url="Optional image URL."
-
 )
 @app_commands.checks.has_permissions(
     administrator=True
 )
 async def welcomesetup(
-
     interaction: discord.Interaction,
-
     channel: discord.TextChannel,
-
     message: str,
-
     embed: str = "no",
-
     color: str = "green",
-
     image_url: str = ""
-
 ):
 
-    guild_id = str(
-        interaction.guild.id
-    )
+    guild_id = str(interaction.guild.id)
 
     if guild_id not in config:
-
         config[guild_id] = {}
 
     config[guild_id]["welcome"] = {
-
         "channel_id": channel.id,
-
         "message": message,
-
-        "embed": embed.lower() in (
+        "embed": embed.lower().strip() in (
             "yes",
             "y",
             "true",
             "on"
         ),
-
         "color": color,
-
-        "image_url": image_url
-
+        "image_url": image_url.strip()
     }
 
     save_config()
 
     await interaction.response.send_message(
-
         "✅ **Welcome system configured!**\n\n"
-
-        f"Channel: {channel.mention}\n"
-
-        f"Embed: `{embed}`\n"
-
-        f"Color: `{color}`\n"
-
-        f"Image: `{image_url or 'None'}`",
-
+        f"**Channel:** {channel.mention}\n"
+        f"**Embed:** `{embed}`\n"
+        f"**Color:** `{color}`\n"
+        f"**Image:** `{image_url or 'None'}`",
         ephemeral=True
-
     )
 
 
@@ -427,28 +288,20 @@ async def welcomesetup(
 @bot.event
 async def on_member_join(member):
 
-    guild_id = str(
-        member.guild.id
-    )
+    guild_id = str(member.guild.id)
 
     guild_config = config.get(
         guild_id,
         {}
     )
 
-    welcome = guild_config.get(
-        "welcome"
-    )
+    welcome = guild_config.get("welcome")
 
     if not welcome:
         return
 
     channel = member.guild.get_channel(
-
-        welcome.get(
-            "channel_id"
-        )
-
+        welcome.get("channel_id")
     )
 
     if channel is None:
@@ -464,40 +317,24 @@ async def on_member_join(member):
         member.mention
     )
 
-    # NORMAL MESSAGE
-
-    if not welcome.get(
-        "embed",
-        False
-    ):
+    if not welcome.get("embed", False):
 
         try:
-
-            await channel.send(
-                message
-            )
+            await channel.send(message)
 
         except Exception as error:
-
-            print(
-                f"WELCOME ERROR: {error}"
-            )
+            print(f"Welcome error: {error}")
 
         return
 
-    # EMBED
-
     welcome_embed = discord.Embed(
-
         description=message,
-
         color=get_color(
             welcome.get(
                 "color",
                 "green"
             )
         )
-
     )
 
     welcome_embed.set_thumbnail(
@@ -510,21 +347,18 @@ async def on_member_join(member):
     )
 
     if image_url:
-
         welcome_embed.set_image(
             url=image_url
         )
 
     try:
-
         await channel.send(
             embed=welcome_embed
         )
 
     except Exception as error:
-
         print(
-            f"WELCOME EMBED ERROR: {error}"
+            f"Welcome embed error: {error}"
         )
 
 
@@ -544,23 +378,16 @@ async def on_member_join(member):
     administrator=True
 )
 async def role(
-
     interaction: discord.Interaction,
-
     user: discord.Member,
-
     role: discord.Role
-
 ):
 
     if role.is_default():
 
         await interaction.response.send_message(
-
             "❌ You cannot give @everyone.",
-
             ephemeral=True
-
         )
 
         return
@@ -570,11 +397,8 @@ async def role(
     if bot_member is None:
 
         await interaction.response.send_message(
-
             "❌ I could not find my bot member.",
-
             ephemeral=True
-
         )
 
         return
@@ -582,37 +406,27 @@ async def role(
     if role >= bot_member.top_role:
 
         await interaction.response.send_message(
-
             "❌ That role is above or equal "
             "to my highest role.",
-
             ephemeral=True
-
         )
 
         return
 
     try:
 
-        await user.add_roles(
-            role
-        )
+        await user.add_roles(role)
 
         await interaction.response.send_message(
-
             f"✅ Gave {role.mention} "
             f"to {user.mention}."
-
         )
 
     except discord.Forbidden:
 
         await interaction.response.send_message(
-
             "❌ I cannot give that role.",
-
             ephemeral=True
-
         )
 
 
@@ -632,13 +446,9 @@ async def role(
     administrator=True
 )
 async def kick(
-
     interaction: discord.Interaction,
-
     user: discord.Member,
-
     reason: str = "No reason provided"
-
 ):
 
     try:
@@ -648,20 +458,15 @@ async def kick(
         )
 
         await interaction.response.send_message(
-
             f"👢 **{user}** was kicked.\n"
-            f"Reason: {reason}"
-
+            f"**Reason:** {reason}"
         )
 
     except discord.Forbidden:
 
         await interaction.response.send_message(
-
             "❌ I cannot kick that member.",
-
             ephemeral=True
-
         )
 
 
@@ -681,13 +486,9 @@ async def kick(
     administrator=True
 )
 async def ban(
-
     interaction: discord.Interaction,
-
     user: discord.Member,
-
     reason: str = "No reason provided"
-
 ):
 
     try:
@@ -697,20 +498,15 @@ async def ban(
         )
 
         await interaction.response.send_message(
-
             f"🔨 **{user}** was banned.\n"
-            f"Reason: {reason}"
-
+            f"**Reason:** {reason}"
         )
 
     except discord.Forbidden:
 
         await interaction.response.send_message(
-
             "❌ I cannot ban that member.",
-
             ephemeral=True
-
         )
 
 
@@ -723,37 +519,25 @@ async def ban(
     description="Timeout a member."
 )
 @app_commands.describe(
-
     user="Member to timeout.",
-
     minutes="Timeout length in minutes.",
-
     reason="Reason."
-
 )
 @app_commands.checks.has_permissions(
     administrator=True
 )
 async def timeout(
-
     interaction: discord.Interaction,
-
     user: discord.Member,
-
     minutes: int,
-
     reason: str = "No reason provided"
-
 ):
 
     if minutes < 1:
 
         await interaction.response.send_message(
-
             "❌ Minutes must be at least 1.",
-
             ephemeral=True
-
         )
 
         return
@@ -761,11 +545,8 @@ async def timeout(
     if minutes > 40320:
 
         await interaction.response.send_message(
-
             "❌ Maximum timeout is 28 days.",
-
             ephemeral=True
-
         )
 
         return
@@ -773,30 +554,20 @@ async def timeout(
     try:
 
         await user.timeout(
-
-            timedelta(
-                minutes=minutes
-            ),
-
+            timedelta(minutes=minutes),
             reason=reason
-
         )
 
         await interaction.response.send_message(
-
             f"⏰ {user.mention} has been "
             f"timed out for **{minutes} minutes**."
-
         )
 
     except discord.Forbidden:
 
         await interaction.response.send_message(
-
             "❌ I cannot timeout that member.",
-
             ephemeral=True
-
         )
 
 
@@ -809,37 +580,25 @@ async def timeout(
     description="Start a giveaway."
 )
 @app_commands.describe(
-
     prize="Giveaway prize.",
-
     winners="Number of winners.",
-
     duration="Duration in seconds."
-
 )
 @app_commands.checks.has_permissions(
     administrator=True
 )
 async def giveaway(
-
     interaction: discord.Interaction,
-
     prize: str,
-
     winners: int,
-
     duration: int
-
 ):
 
     if winners < 1:
 
         await interaction.response.send_message(
-
             "❌ Winners must be at least 1.",
-
             ephemeral=True
-
         )
 
         return
@@ -847,50 +606,33 @@ async def giveaway(
     if duration < 10:
 
         await interaction.response.send_message(
-
             "❌ Duration must be at least 10 seconds.",
-
             ephemeral=True
-
         )
 
         return
 
-    giveaway_embed = discord.Embed(
-
+    embed = discord.Embed(
         title="🎉 GIVEAWAY!",
-
         description=(
-
             f"🎁 **Prize:** {prize}\n"
-
             f"🏆 **Winners:** {winners}\n\n"
-
-            "React with 🎉 to enter!"
-
+            f"React with 🎉 to enter!"
         ),
-
         color=discord.Color.green()
-
     )
 
     await interaction.response.send_message(
-
-        embed=giveaway_embed
-
+        embed=embed
     )
 
     giveaway_message = (
         await interaction.original_response()
     )
 
-    await giveaway_message.add_reaction(
-        "🎉"
-    )
+    await giveaway_message.add_reaction("🎉")
 
-    await asyncio.sleep(
-        duration
-    )
+    await asyncio.sleep(duration)
 
     try:
 
@@ -901,73 +643,53 @@ async def giveaway(
         )
 
         reaction = discord.utils.get(
-
             giveaway_message.reactions,
-
             emoji="🎉"
-
         )
 
         if reaction is None:
             return
 
         users = [
-
             user async for user in reaction.users()
-
             if not user.bot
-
         ]
 
         if not users:
 
             await interaction.channel.send(
-
                 "😔 Nobody entered the giveaway."
-
             )
 
             return
 
-        chosen = random.sample(
-
+        selected = random.sample(
             users,
-
-            min(
-                winners,
-                len(users)
-            )
-
+            min(winners, len(users))
         )
 
         mentions = ", ".join(
-
             user.mention
-            for user in chosen
-
+            for user in selected
         )
 
         await interaction.channel.send(
-
             f"🎉 Congratulations {mentions}!\n"
             f"You won **{prize}**!"
-
         )
 
     except Exception as error:
 
         print(
-            f"GIVEAWAY ERROR: {error}"
+            f"Giveaway error: {error}"
         )
 
 
 # ============================================================
-# VERIFY VIEW
+# VERIFY BUTTON
 # ============================================================
 
-class VerifyView(
-    discord.ui.View
-):
+class VerifyView(discord.ui.View):
 
     def __init__(self):
 
@@ -976,24 +698,15 @@ class VerifyView(
         )
 
     @discord.ui.button(
-
         label="Verify",
-
         style=discord.ButtonStyle.green,
-
         emoji="✅",
-
         custom_id="emerald_verify_button"
-
     )
     async def verify_button(
-
         self,
-
         interaction: discord.Interaction,
-
         button: discord.ui.Button
-
     ):
 
         guild_id = str(
@@ -1012,29 +725,21 @@ class VerifyView(
         if not verify:
 
             await interaction.response.send_message(
-
                 "❌ Verification is not configured.",
-
                 ephemeral=True
-
             )
 
             return
 
         role = interaction.guild.get_role(
-
             verify["role_id"]
-
         )
 
         if role is None:
 
             await interaction.response.send_message(
-
                 "❌ The verified role no longer exists.",
-
                 ephemeral=True
-
             )
 
             return
@@ -1046,22 +751,16 @@ class VerifyView(
             )
 
             await interaction.response.send_message(
-
                 "✅ You are now verified!",
-
                 ephemeral=True
-
             )
 
         except discord.Forbidden:
 
             await interaction.response.send_message(
-
-                "❌ I cannot give you "
-                "the verified role.",
-
+                "❌ I cannot give you the "
+                "verified role.",
                 ephemeral=True
-
             )
 
 
@@ -1074,23 +773,16 @@ class VerifyView(
     description="Set up server verification."
 )
 @app_commands.describe(
-
     channel="Verification channel.",
-
     role="Role users receive after verification."
-
 )
 @app_commands.checks.has_permissions(
     administrator=True
 )
 async def verifysetup(
-
     interaction: discord.Interaction,
-
     channel: discord.TextChannel,
-
     role: discord.Role
-
 ):
 
     guild_id = str(
@@ -1098,50 +790,34 @@ async def verifysetup(
     )
 
     if guild_id not in config:
-
         config[guild_id] = {}
 
     config[guild_id]["verify"] = {
-
         "channel_id": channel.id,
-
         "role_id": role.id
-
     }
 
     save_config()
 
-    verify_embed = discord.Embed(
-
+    embed = discord.Embed(
         title="✅ Verification",
-
         description=(
-
             "Click **Verify** below to receive "
             "the verified role."
-
         ),
-
         color=discord.Color.green()
-
     )
 
     await channel.send(
-
-        embed=verify_embed,
-
+        embed=embed,
         view=VerifyView()
-
     )
 
     await interaction.response.send_message(
-
         f"✅ Verification setup completed.\n"
         f"Channel: {channel.mention}\n"
         f"Role: {role.mention}",
-
         ephemeral=True
-
     )
 
 
@@ -1151,89 +827,110 @@ async def verifysetup(
 
 @bot.tree.command(
     name="jointocreate",
-    description="Create a Join to Create voice system."
+    description="Set up a temporary Join To Create voice channel."
 )
 @app_commands.describe(
-    category="Category for the Join to Create channel."
+    category="The category where Join To Create will be created."
 )
 @app_commands.checks.has_permissions(
     administrator=True
 )
 async def jointocreate(
-
     interaction: discord.Interaction,
-
     category: discord.CategoryChannel
-
 ):
 
-    guild_id = str(
-        interaction.guild.id
-    )
+    guild = interaction.guild
+    guild_id = str(guild.id)
 
     if guild_id not in config:
-
         config[guild_id] = {}
 
-    # If an old JTC trigger exists,
-    # remove ONLY the old trigger.
+    # --------------------------------------------------------
+    # DELETE OLD TRIGGER IF ONE EXISTS
+    # --------------------------------------------------------
 
-    old_id = config[guild_id].get(
-        "jtc_channel_id"
+    old_trigger_id = config[guild_id].get(
+        "jtc_trigger"
     )
 
-    if old_id:
+    if old_trigger_id:
 
-        old_channel = (
-            interaction.guild.get_channel(
-                old_id
-            )
+        old_trigger = guild.get_channel(
+            old_trigger_id
         )
 
-        if old_channel:
+        if old_trigger:
 
             try:
 
-                await old_channel.delete()
+                await old_trigger.delete(
+                    reason="Replacing old Join To Create channel"
+                )
 
-            except Exception:
+            except Exception as error:
 
-                pass
+                print(
+                    f"Could not delete old JTC: {error}"
+                )
 
-    # CREATE PERMANENT TRIGGER CHANNEL
+    # --------------------------------------------------------
+    # CREATE PERMANENT TRIGGER
+    # --------------------------------------------------------
 
-    channel = (
-        await interaction.guild.create_voice_channel(
+    try:
+
+        trigger = await guild.create_voice_channel(
 
             name="Join To Create",
 
-            category=category
+            category=category,
+
+            reason="Join To Create setup"
 
         )
-    )
 
-    # Save ONLY the trigger channel ID
+    except discord.Forbidden:
 
-    config[guild_id][
-        "jtc_channel_id"
-    ] = channel.id
+        await interaction.response.send_message(
 
-    # Keep temporary channels list
+            "❌ I need **Manage Channels** permission "
+            "to create the Join To Create channel.",
 
-    config[guild_id].setdefault(
-        "temporary_channels",
-        []
-    )
+            ephemeral=True
+
+        )
+
+        return
+
+    except Exception as error:
+
+        print(
+            f"JTC SETUP ERROR: {error}"
+        )
+
+        await interaction.response.send_message(
+
+            "❌ Could not create the Join To Create channel.",
+
+            ephemeral=True
+
+        )
+
+        return
+
+    # Save trigger ID
+
+    config[guild_id]["jtc_trigger"] = trigger.id
 
     save_config()
 
     await interaction.response.send_message(
 
-        f"✅ Join to Create has been set up!\n\n"
-        f"🔊 Trigger channel: {channel.mention}\n\n"
-        "When somebody joins it, a temporary "
-        "voice channel will be created and "
-        "they will automatically be moved into it.",
+        f"✅ **Join To Create is ready!**\n\n"
+        f"🔊 Join: {trigger.mention}\n\n"
+        f"When someone joins it, the bot will create "
+        f"a temporary voice channel and move them into it.",
 
         ephemeral=True
 
@@ -1241,214 +938,163 @@ async def jointocreate(
 
 
 # ============================================================
-# JOIN TO CREATE VOICE SYSTEM
+# JOIN TO CREATE SYSTEM
 # ============================================================
 
 @bot.event
 async def on_voice_state_update(
-
-    member,
-
-    before,
-
-    after
-
+    member: discord.Member,
+    before: discord.VoiceState,
+    after: discord.VoiceState
 ):
 
-    guild_id = str(
-        member.guild.id
-    )
+    guild = member.guild
+    guild_id = str(guild.id)
 
     guild_config = config.get(
         guild_id,
         {}
     )
 
-    jtc_id = guild_config.get(
-        "jtc_channel_id"
+    trigger_id = guild_config.get(
+        "jtc_trigger"
     )
 
-    if not jtc_id:
+    # No setup
+    if not trigger_id:
         return
 
-
     # ========================================================
-    # JOINED THE PERMANENT TRIGGER
+    # JOINED THE JOIN TO CREATE CHANNEL
     # ========================================================
 
     if (
-
-        after.channel
-
-        and after.channel.id == jtc_id
-
+        after.channel is not None
+        and after.channel.id == trigger_id
     ):
+
+        trigger_channel = after.channel
 
         try:
 
-            # Create a NEW temporary channel
+            # Create temporary voice channel
+            new_channel = await guild.create_voice_channel(
 
-            new_channel = (
+                name=f"{member.display_name}'s Channel",
 
-                await member.guild.create_voice_channel(
+                category=trigger_channel.category,
 
-                    name=f"{member.display_name}'s Channel",
+                reason="Join To Create temporary channel"
 
-                    category=after.channel.category
-
-                )
-
-            )
-
-            # Store temporary channel ID
-
-            temporary_channels = (
-                guild_config.setdefault(
-
-                    "temporary_channels",
-
-                    []
-
-                )
-            )
-
-            temporary_channels.append(
-                new_channel.id
-            )
-
-            save_config()
-
-
-            # =================================================
-            # MOVE USER INTO NEW CHANNEL
-            # =================================================
-
-            await member.move_to(
-                new_channel
             )
 
             print(
+                f"JTC: Created {new_channel.name}"
+            )
 
-                f"Created temporary channel "
-                f"'{new_channel.name}' for "
-                f"{member}"
+            # Move member into their new channel
+            await member.move_to(
+                new_channel,
+                reason="Join To Create"
+            )
 
+            print(
+                f"JTC: Moved {member} into "
+                f"{new_channel.name}"
             )
 
         except discord.Forbidden:
 
             print(
+                "JTC ERROR: Bot needs "
+                "Manage Channels AND Move Members."
+            )
 
-                "❌ JTC ERROR: I don't have permission "
-                "to create or move members."
+        except discord.HTTPException as error:
 
+            print(
+                f"JTC Discord error: {error}"
             )
 
         except Exception as error:
 
             print(
-
-                f"❌ JTC CREATE ERROR: {error}"
-
+                f"JTC error: {error}"
             )
 
         return
 
-
     # ========================================================
-    # LEFT A TEMPORARY CHANNEL
+    # USER LEFT A CHANNEL
     # ========================================================
 
-    if before.channel:
+    if before.channel is None:
+        return
 
-        temporary_channels = (
-            guild_config.get(
+    old_channel = before.channel
 
-                "temporary_channels",
+    # NEVER DELETE THE PERMANENT TRIGGER
+    if old_channel.id == trigger_id:
+        return
 
-                []
+    # --------------------------------------------------------
+    # CHECK WHETHER THIS IS ONE OF OUR TEMPORARY CHANNELS
+    # --------------------------------------------------------
 
-            )
+    # Our temporary channels always end with "'s Channel"
+    if not old_channel.name.endswith("'s Channel"):
+        return
+
+    # Somebody else is still inside
+    if len(old_channel.members) > 0:
+        return
+
+    # --------------------------------------------------------
+    # DELETE EMPTY TEMPORARY CHANNEL
+    # --------------------------------------------------------
+
+    try:
+
+        await old_channel.delete(
+            reason="Empty Join To Create channel"
         )
 
-        # IMPORTANT:
-        # Only channels created by this system
-        # can ever be deleted.
+        print(
+            f"JTC: Deleted {old_channel.name}"
+        )
 
-        if before.channel.id in temporary_channels:
+    except discord.NotFound:
 
-            # Nobody is inside
+        pass
 
-            if len(
-                before.channel.members
-            ) == 0:
+    except discord.Forbidden:
 
-                channel_id = (
-                    before.channel.id
-                )
+        print(
+            "JTC ERROR: Bot needs Manage Channels "
+            "to delete temporary channels."
+        )
 
-                try:
+    except discord.HTTPException as error:
 
-                    await before.channel.delete(
+        print(
+            f"JTC delete error: {error}"
+        )
 
-                        reason=(
-                            "Join to Create "
-                            "temporary channel empty"
-                        )
+    except Exception as error:
 
-                    )
-
-                    print(
-
-                        f"Deleted temporary "
-                        f"channel {channel_id}"
-
-                    )
-
-                except discord.NotFound:
-
-                    pass
-
-                except discord.Forbidden:
-
-                    print(
-
-                        "❌ JTC ERROR: I don't have "
-                        "permission to delete "
-                        "temporary channels."
-
-                    )
-
-                except Exception as error:
-
-                    print(
-
-                        f"❌ JTC DELETE ERROR: {error}"
-
-                    )
-
-                # Remove from saved list
-
-                if channel_id in temporary_channels:
-
-                    temporary_channels.remove(
-                        channel_id
-                    )
-
-                save_config()
+        print(
+            f"JTC delete error: {error}"
+        )
 
 
 # ============================================================
-# ERROR HANDLER
+# COMMAND ERROR HANDLER
 # ============================================================
 
 @bot.tree.error
 async def command_error(
-
     interaction: discord.Interaction,
-
     error: app_commands.AppCommandError
-
 ):
 
     print(
@@ -1456,27 +1102,20 @@ async def command_error(
     )
 
     if isinstance(
-
         error,
-
         app_commands.MissingPermissions
-
     ):
 
         message = (
-
             "❌ You need **Administrator** "
             "permission to use this command."
-
         )
 
     else:
 
         message = (
-
             "❌ Something went wrong. "
             "Check the Railway logs."
-
         )
 
     try:
@@ -1484,40 +1123,28 @@ async def command_error(
         if interaction.response.is_done():
 
             await interaction.followup.send(
-
                 message,
-
                 ephemeral=True
-
             )
 
         else:
 
             await interaction.response.send_message(
-
                 message,
-
                 ephemeral=True
-
             )
 
     except Exception as error:
 
         print(
-
-            f"ERROR HANDLER ERROR: {error}"
-
+            f"Error handler error: {error}"
         )
 
 
 # ============================================================
-# START BOT
+# START
 # ============================================================
 
-print(
-    "Starting Emerald Bot..."
-)
+print("Starting Emerald Bot...")
 
-bot.run(
-    TOKEN
-)
+bot.run(TOKEN)
