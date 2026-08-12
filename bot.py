@@ -2170,7 +2170,7 @@ async def help_command(interaction: discord.Interaction):
         value=(
             "`/welcomesetup` — Admin\n"
             "`/leavemessagesetup` — Premium + Admin"
-            "`/ticketsetup` — Admin"
+            "`/ticketsetup` — Premium+Admin"
         ),
         inline=False
     )
