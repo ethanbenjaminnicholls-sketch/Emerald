@@ -91,8 +91,8 @@ COLORS = {
     "teal": discord.Color.teal(),
     "black": discord.Color.from_rgb(0, 0, 0),
     "white": discord.Color.from_rgb(255, 255, 255),
-    "gray": discord.Color.grey(),
-    "grey": discord.Color.grey()
+  "gray": discord.Color.dark_gray(),
+"grey": discord.Color.dark_gray()
 }
 
 
